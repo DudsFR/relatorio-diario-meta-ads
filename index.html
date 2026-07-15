@@ -311,7 +311,7 @@ function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investim
   const funnelTop = 330;
   const stageH = 112;
   const gap = 8;
-  const stageTopW = [420, 300, 200, 120];
+  const stageTopW = [420, 300, 200];
 
   function trapezoid(topW, botW, y) {
     const x1 = cx - topW / 2, x2 = cx + topW / 2;
@@ -384,13 +384,13 @@ function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investim
   <rect x="${panelBarX}" y="${panel1Y - 48}" width="6" height="96" fill="${RED}"/>
   <text x="${panelBarX - 22}" y="${panel1Y - 20}" font-family="Segoe UI, Arial" font-size="26" font-weight="700" fill="#ffffff" text-anchor="end">Investimento</text>
   <text x="${panelBarX - 22}" y="${panel1Y + 12}" font-family="Segoe UI, Arial" font-size="26" font-weight="700" fill="#ffffff" text-anchor="end">do dia</text>
-  <text x="${panelRight}" y="${panel1Y + 44}" font-family="Segoe UI, Arial" font-size="30" font-weight="800" fill="${RED}" text-anchor="end">${svgEsc(investTxt)}</text>
+  <text x="${panelBarX - 22}" y="${panel1Y + 44}" font-family="Segoe UI, Arial" font-size="30" font-weight="800" fill="${RED}" text-anchor="end">${svgEsc(investTxt)}</text>
 
   <!-- Right column: Custo por lead -->
   <rect x="${panelBarX}" y="${panel2Y - 48}" width="6" height="96" fill="${RED}"/>
   <text x="${panelBarX - 22}" y="${panel2Y - 20}" font-family="Segoe UI, Arial" font-size="26" font-weight="700" fill="#ffffff" text-anchor="end">Custo por</text>
   <text x="${panelBarX - 22}" y="${panel2Y + 12}" font-family="Segoe UI, Arial" font-size="26" font-weight="700" fill="#ffffff" text-anchor="end">lead</text>
-  <text x="${panelRight}" y="${panel2Y + 44}" font-family="Segoe UI, Arial" font-size="30" font-weight="800" fill="${RED}" text-anchor="end">${svgEsc(custoTxt)}</text>
+  <text x="${panelBarX - 22}" y="${panel2Y + 44}" font-family="Segoe UI, Arial" font-size="30" font-weight="800" fill="${RED}" text-anchor="end">${svgEsc(custoTxt)}</text>
 
   <!-- Bottom-right decorative corner -->
   <polygon points="${W},${H} ${W},${H-110} ${W-110},${H}" fill="${RED_DARK}" opacity="0.6"/>
