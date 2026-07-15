@@ -164,42 +164,70 @@ function findValue(text, labels) {
   return null;
 }
 
-function extractTotalsBlock(text) {
-  // Meta Ads export: the aggregated totals block starts with "Resultados de N campanhas"
-  // and lists VALUES BEFORE their labels, in this order:
-  // leads, custo por resultado, valor usado (investimento), impressões, alcance
-  const lines = text.split('\n').map(l => l.trim());
-  let startIdx = -1;
+function findTotalsMarkerIndex(lines) {
   for (let i = 0; i < lines.length; i++) {
-    if (/^Resultados de \d+ campanhas?$/i.test(lines[i])) {
-      startIdx = i;
-      break;
+    if (/^Resultados de \d+ (campanhas?|conjuntos de anúncios)$/i.test(lines[i])) return i;
+  }
+  return -1;
+}
+
+// Sums the "Resultados" (leads) value of every individual ad set / campaign row.
+// Each row always ends with a "Por ..." label 3 lines after its Resultados value
+// (Resultados → type label → Custo por resultado → "Por ..."), regardless of how
+// many extra lines (e.g. "Alto desempenho") appear earlier in the row.
+function sumLeadsFromRows(lines, beforeIdx) {
+  const scanLines = beforeIdx >= 0 ? lines.slice(0, beforeIdx) : lines;
+  let total = 0, any = false;
+  for (let i = 0; i < scanLines.length; i++) {
+    if (/^Por /i.test(scanLines[i])) {
+      const n = parseNumberBR(scanLines[i - 3]);
+      if (n !== null) { total += n; any = true; }
     }
   }
-  if (startIdx === -1) return null;
+  return any ? total : null;
+}
 
-  const values = [];
-  const valueLineRegex = /^(R\$\s?[\d.,]+|[\d.,]+)$/;
-  const stopWords = /^(Contas Meta|Configuração|Estratégia)/i;
+function extractTotalsBlock(text) {
+  // Meta Ads export: the aggregated totals block starts with "Resultados de N campanhas/conjuntos".
+  // Values appear BEFORE their labels. Anchor everything off "Total usado" / "Total" since those
+  // labels are always present, even when leads/custo show "—" or "Múltiplas conversões" (mixed goal types).
+  const lines = text.split('\n').map(l => l.trim());
+  const markerIdx = findTotalsMarkerIndex(lines);
+  if (markerIdx === -1) return null;
 
-  for (let i = startIdx + 1; i < lines.length && values.length < 5; i++) {
-    const line = lines[i];
-    if (line === '' || /^Ocultar resultados$/i.test(line)) continue;
-    if (stopWords.test(line)) break;
-    if (valueLineRegex.test(line)) {
-      values.push(line);
-    }
-    // otherwise it's a label line (e.g. "Conversas por mensagem iniciadas", "Total usado", "Total") — skip it
+  let totalUsadoIdx = -1;
+  for (let i = markerIdx + 1; i < lines.length; i++) {
+    if (/^Total usado$/i.test(lines[i])) { totalUsadoIdx = i; break; }
   }
+  if (totalUsadoIdx === -1) return null;
 
-  if (values.length < 5) return null;
+  const investimentoRaw = lines[totalUsadoIdx - 1];
+  const leadsRaw = lines[totalUsadoIdx - 5];
+  const custoPorLeadRaw = lines[totalUsadoIdx - 3];
+  const impressoesRaw = lines[totalUsadoIdx + 1];
+  const alcanceRaw = lines[totalUsadoIdx + 3];
+
+  let leads = parseNumberBR(leadsRaw);
+  let custoPorLead = parseNumberBR(custoPorLeadRaw);
+  const investimento = parseNumberBR(investimentoRaw);
+
+  // Mixed conversion types ("Múltiplas conversões") mean Meta doesn't show a combined
+  // leads/custo total — sum the individual ad set rows ourselves instead.
+  if (leads === null) {
+    leads = sumLeadsFromRows(lines, markerIdx);
+    if (leads !== null && leads > 0 && investimento !== null) {
+      custoPorLead = investimento / leads;
+    } else {
+      custoPorLead = null;
+    }
+  }
 
   return {
-    leads: values[0],
-    custoPorLead: values[1],
-    investimento: values[2],
-    impressoes: values[3],
-    alcance: values[4]
+    leads: leads !== null ? String(leads) : null,
+    custoPorLead: custoPorLead !== null ? String(custoPorLead) : null,
+    investimento: investimentoRaw,
+    impressoes: impressoesRaw,
+    alcance: alcanceRaw
   };
 }
 
