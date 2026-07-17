@@ -222,9 +222,12 @@ function extractTotalsBlock(text) {
     }
   }
 
+  // leadsNum/custoPorLeadNum are already-parsed JS numbers (not Brazilian-formatted strings) —
+  // callers must use them directly instead of re-parsing, otherwise a value like 8.586 gets
+  // misread as "8.586" thousand-separated (i.e. 8586) by parseNumberBR.
   return {
-    leads: leads !== null ? String(leads) : null,
-    custoPorLead: custoPorLead !== null ? String(custoPorLead) : null,
+    leadsNum: leads,
+    custoPorLeadNum: custoPorLead,
     investimento: investimentoRaw,
     impressoes: impressoesRaw,
     alcance: alcanceRaw
@@ -254,26 +257,29 @@ function gerarRelatorio() {
 
   const totals = extractTotalsBlock(text);
 
-  let impressoesRaw, alcanceRaw, leadsRaw, custoPorLeadRaw, investimentoRaw;
+  let impressoes, alcance, leads, custoPorLead, investimento;
   if (totals) {
-    impressoesRaw = totals.impressoes;
-    alcanceRaw = totals.alcance;
-    leadsRaw = totals.leads;
-    custoPorLeadRaw = totals.custoPorLead;
-    investimentoRaw = totals.investimento;
+    impressoes = parseNumberBR(totals.impressoes);
+    alcance = parseNumberBR(totals.alcance);
+    investimento = parseNumberBR(totals.investimento);
+    // These were already computed as real numbers inside extractTotalsBlock —
+    // reusing them directly avoids re-parsing a JS decimal string (e.g. "8.586")
+    // through the Brazilian-format parser, which would misread it as 8586.
+    leads = totals.leadsNum;
+    custoPorLead = totals.custoPorLeadNum;
   } else {
-    impressoesRaw = findValue(text, ['Impress(?:ões|oes|ão|ao)']);
-    alcanceRaw = findValue(text, ['Alcance']);
-    leadsRaw = findValue(text, ['Resultados?', 'Leads?', 'Cadastros?']);
-    custoPorLeadRaw = findValue(text, ['Custo por resultados?', 'Custo por lead', 'Custo por resultado']);
-    investimentoRaw = findValue(text, ['Valor usado(?: \\(BRL\\))?', 'Investimento', 'Custo total', 'Total gasto', 'Gasto']);
-  }
+    const impressoesRaw = findValue(text, ['Impress(?:ões|oes|ão|ao)']);
+    const alcanceRaw = findValue(text, ['Alcance']);
+    const leadsRaw = findValue(text, ['Resultados?', 'Leads?', 'Cadastros?']);
+    const custoPorLeadRaw = findValue(text, ['Custo por resultados?', 'Custo por lead', 'Custo por resultado']);
+    const investimentoRaw = findValue(text, ['Valor usado(?: \\(BRL\\))?', 'Investimento', 'Custo total', 'Total gasto', 'Gasto']);
 
-  const impressoes = parseNumberBR(impressoesRaw);
-  const alcance = parseNumberBR(alcanceRaw);
-  const leads = parseNumberBR(leadsRaw);
-  let custoPorLead = parseNumberBR(custoPorLeadRaw);
-  const investimento = parseNumberBR(investimentoRaw);
+    impressoes = parseNumberBR(impressoesRaw);
+    alcance = parseNumberBR(alcanceRaw);
+    leads = parseNumberBR(leadsRaw);
+    custoPorLead = parseNumberBR(custoPorLeadRaw);
+    investimento = parseNumberBR(investimentoRaw);
+  }
 
   // If custo por lead not found but we have investimento and leads, calculate it
   if (custoPorLead === null && investimento !== null && leads) {
